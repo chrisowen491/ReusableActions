@@ -20,9 +20,9 @@ on:
       AWS_DEPLOY_BUCKET:
         required: true
       CF_SPACE:
-        required: true
+        required: false
       CF_KEY:
-        required: true
+        required: false
 
 jobs:
   build_test_and_package:
