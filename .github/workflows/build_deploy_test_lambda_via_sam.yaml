@@ -12,17 +12,12 @@ on:
       stack_name:
         type: string
         required: true
-      repository:
-        type: string
-        required: true
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
       AWS_DEPLOY_BUCKET:
-        required: true
-      GITHUB_TOKEN:
         required: true
       CF_SPACE:
         required: true
@@ -49,7 +44,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'eu-west-1'
       - name: SAM Package
-        run: sam package --output-template-file packaged-template.yaml --s3-prefix ${{inputs.repository}} --s3-bucket ${{ secrets.AWS_DEPLOY_BUCKET }}
+        run: sam package --output-template-file packaged-template.yaml --s3-prefix ${{github.repository}} --s3-bucket ${{ secrets.AWS_DEPLOY_BUCKET }}
       - name: Archive template
         uses: actions/upload-artifact@v2
         with:
@@ -63,7 +58,7 @@ jobs:
         id: tag_repo
         uses: anothrNick/github-tag-action@1.39.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           WITH_V: true  
           RELEASE_BRANCHES: .* 
           INITIAL_VERSION: v1.0.0             
@@ -91,10 +86,10 @@ jobs:
         id: generate-uuid
         uses: filipstefansson/uuid-action@v1      
       - name: OpenAPI Upload
-        run: aws s3 cp openapi.yaml s3://${{ secrets.AWS_DEPLOY_BUCKET }}/${{inputs.repository}}/openapi-${{ steps.generate-uuid.outputs.uuid }}.yaml             
+        run: aws s3 cp openapi.yaml s3://${{ secrets.AWS_DEPLOY_BUCKET }}/${{github.repository}}/openapi-${{ steps.generate-uuid.outputs.uuid }}.yaml             
       - name: SAM Deploy
         run:
-          sam deploy --template packaged-template.yaml --no-fail-on-empty-changeset --stack-name ${{inputs.stack_name}} --s3-bucket ${{ secrets.AWS_DEPLOY_BUCKET }} --s3-prefix ${{inputs.repository}} --parameter-overrides EnvName=${{inputs.env}} S3BucketName=${{ secrets.AWS_DEPLOY_BUCKET }} OpenAPIFile=${{inputs.repository}}/openapi-${{ steps.generate-uuid.outputs.uuid }}.yaml CFSPACE=${{ secrets.CF_SPACE }} CFKEY=${{ secrets.CF_KEY }} Deployment=AllAtOnce Version=${{needs.build_test_and_package.outputs.tag}} Service=${{inputs.repository}} --capabilities CAPABILITY_IAM
+          sam deploy --template packaged-template.yaml --no-fail-on-empty-changeset --stack-name ${{inputs.stack_name}} --s3-bucket ${{ secrets.AWS_DEPLOY_BUCKET }} --s3-prefix ${{github.repository}} --parameter-overrides EnvName=${{inputs.env}} S3BucketName=${{ secrets.AWS_DEPLOY_BUCKET }} OpenAPIFile=${{github.repository}}/openapi-${{ steps.generate-uuid.outputs.uuid }}.yaml CFSPACE=${{ secrets.CF_SPACE }} CFKEY=${{ secrets.CF_KEY }} Deployment=AllAtOnce Version=${{needs.build_test_and_package.outputs.tag}} Service=${{github.repository}} --capabilities CAPABILITY_IAM
 
   acceptance_test:
     runs-on: ubuntu-latest
